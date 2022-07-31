@@ -61,7 +61,7 @@ contract Staker {
         // require they can stake
         require(
             currentStakes[msg.sender].cannotStake == false,
-            "You cannot stake right now"
+            "You cannot stake right now!"
         );
         // require ETH is between 1 and 100
         require(msg.value >= 1 ether, "not enough ETH. Min 1 ETH");
