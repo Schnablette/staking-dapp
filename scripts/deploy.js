@@ -7,18 +7,24 @@
 const hre = require("hardhat");
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+  const [deployer, addr1, addr2, ...addrs] = await hre.ethers.getSigners();
 
-  const lockedAmount = hre.ethers.utils.parseEther("1");
+  const Staker = await hre.ethers.getContractFactory("Staker");
+  const staker = await Staker.deploy();
 
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+  console.log("STAKER DEPLOYED TO:", staker.address);
 
-  await lock.deployed();
+  const Token = await hre.ethers.getContractFactory("Token");
+  initialSupply = hre.ethers.utils.parseEther("1000000");
+  const token = await Token.deploy(initialSupply);
 
-  console.log("Lock with 1 ETH deployed to:", lock.address);
+  console.log("TOKEN DEPLOYED TO:", token.address);
+
+  stakerSupply = hre.ethers.utils.parseEther("500000");
+  token.connect(deployer).transfer(staker.address, stakerSupply);
+
+  stakerBalance = await token.balanceOf(staker.address);
+  console.log("STAKER BALANCE: ", hre.ethers.utils.formatEther(stakerBalance.toString()));
 }
 
 // We recommend this pattern to be able to use async/await everywhere
