@@ -19,6 +19,10 @@ contract Staker {
 
     mapping(address => userStake) currentStakes;
 
+    event userStaked(address indexed _user, uint256 etherStaked);
+    event userWithdrawStake(address indexed _user, uint256 etherStaked);
+    event userWithdrawReward(address indexed _user, uint256 stakeReward);
+
     constructor(
         IERC20 _token,
         uint256 _exchangeRate,
@@ -29,11 +33,22 @@ contract Staker {
         lockedTimeMinutes = _lockedTimeMinutes * 1 minutes;
     }
 
-    event userStaked(address indexed _user, uint256 etherStaked);
-
     modifier checkTime() {
-        // check enough time has passed
+        require(
+            block.timestamp >= currentStakes[msg.sender].unlockTime,
+            "It's not time to withdraw yet"
+        );
         _;
+    }
+
+    modifier checkRestake() {
+        _;
+        if (
+            currentStakes[msg.sender].etherStaked == 0 &&
+            currentStakes[msg.sender].stakeReward == 0
+        ) {
+            currentStakes[msg.sender].cannotStake = false;
+        }
     }
 
     modifier emitEvent() {
@@ -66,8 +81,35 @@ contract Staker {
     }
 
     // User withdraws full stake from contract
-    function withdrawStake() external checkTime emitEvent {}
+    function withdrawStake() external payable checkTime checkRestake {
+        require(
+            currentStakes[msg.sender].etherStaked > 0,
+            "no value to unstake"
+        );
+
+        uint256 userStakedAmount = currentStakes[msg.sender].etherStaked;
+        currentStakes[msg.sender].etherStaked = 0;
+
+        (bool success, ) = msg.sender.call{value: userStakedAmount}("");
+        require(success, "Call Failed");
+
+        emit userWithdrawStake(msg.sender, userStakedAmount);
+
+        // run modifier to check restake
+    }
 
     // User withdraws full reward from contract
-    function withdrawReward() external checkTime emitEvent {}
+    function withdrawReward() external checkTime checkRestake {
+        require(
+            currentStakes[msg.sender].stakeReward > 0,
+            "no value to unstake"
+        );
+
+        uint256 userRewardAmount = currentStakes[msg.sender].stakeReward;
+        currentStakes[msg.sender].stakeReward = 0;
+
+        token.transfer(msg.sender, userRewardAmount);
+
+        emit userWithdrawReward(msg.sender, userRewardAmount);
+    }
 }
